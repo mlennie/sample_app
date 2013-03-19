@@ -51,6 +51,11 @@ describe "Authentication" do
         describe "for non-signed-in users" do 
             let(:user) { FactoryGirl.create(:user) }
 
+            it { should_not have_link('Users',       href: users_path) }
+            it { should_not have_link('Profile',     href: user_path(user)) }
+            it { should_not have_link('Settings',    href: edit_user_path(user)) }
+            it { should_not have_link('Sign out',    href: signout_path) }
+
             describe "when attempting to visit a protected page" do 
                 before do 
                     visit edit_user_path(user)
@@ -64,14 +69,32 @@ describe "Authentication" do
                     it "should render the desired protected page" do
                         page.should have_selector('title', text: 'Edit user') 
                     end
+
+                    describe "when signing in again" do 
+                        before { sign_in user }
+
+                        it "should render the default (profile) page" do 
+                            page.should have_selector('title', text: user.name)
+                        end
+                    end
                 end
             end
-        end
 
+            describe "in the Microposts controller" do 
 
+                describe "submitting to the create action" do 
+                    before { post microposts_path }
+                    specify { response.should redirect_to(signin_path) }
+                end
 
-        describe "for non-signed-in users" do 
-            let(:user) { FactoryGirl.create(:user) }
+                describe "submitting to the destroy action" do 
+                    before do 
+                        micropost = FactoryGirl.create(:micropost) 
+                        delete micropost_path(micropost) 
+                    end
+                    specify { response.should redirect_to(signin_path) }
+                end
+            end
 
             describe "in the Users controller" do 
 
@@ -117,6 +140,18 @@ describe "Authentication" do
             describe "submitting a DELETE request to the Users#destroy action" do 
                 before { delete user_path(user) }
                 specify { response.should redirect_to(root_path) }
+            end
+        end
+
+        describe "as an admin" do 
+            let(:admin) { FactoryGirl.create(:user, admin: "true") }
+            before { sign_in admin } 
+
+            describe "trying to delete yourself" do 
+                before { delete user_path(admin) }
+        
+                specify { response.should redirect_to(users_path),
+                    flash[:error].should =~ /Woah there you can't do that!/ }
             end
         end
     end

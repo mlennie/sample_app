@@ -1,7 +1,8 @@
 class UsersController < ApplicationController
-  before_filter :signed_in_user, only: [:index, :show, :edit, :update, :destroy]
-  before_filter :correct_user,   only: [:show, :edit, :update]
-  before_filter :admin_user,     only: :destroy
+  before_filter :non_signed_in_user, only: [:new, :create]
+  before_filter :signed_in_user,     only: [:index, :show, :edit, :update, :destroy]
+  before_filter :correct_user,       only: [:show, :edit, :update]
+  before_filter :admin_user,         only: :destroy
 
   def index
     @users = User.paginate(page: params[:page])
@@ -9,6 +10,7 @@ class UsersController < ApplicationController
 
   def show
     @user = User.find(params[:id])
+    @microposts = @user.microposts.paginate(page: params[:page])
   end
 
   def new
@@ -40,19 +42,24 @@ class UsersController < ApplicationController
   end
 
   def destroy
-    User.find(params[:id]).destroy
-    flash[:success] = "User destroyed."
+    user = User.find(params[:id])
+
+    if current_user?(user) && current_user.admin?
+      flash[:error] = "Woah there you can't do that!"
+    else
+      user.destroy
+      flash[:success] = "User destroyed."
+    end
     redirect_to users_path
   end
 
   private
 
-  def signed_in_user
-    unless signed_in?
-      store_location
-      redirect_to signin_path, notice: "Please sign in."
-    end 
-  end
+  def non_signed_in_user
+    if signed_in?
+      redirect_to root_path, notice: "You're already signed in as a member!"
+    end
+  end 
 
   def correct_user
     @user = User.find(params[:id])
