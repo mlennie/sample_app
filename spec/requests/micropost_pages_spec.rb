@@ -29,10 +29,52 @@ describe "Micropost Pages" do
 	   			expect { click_button "Post" }.should change(Micropost, :count).by(1)
 	   		end
 	   	end
+
+	   	describe "showing proper micropost count" do 
+	   		before { FactoryGirl.create(:micropost, user: user, content: "Lorem ipsum") }
+
+	        describe "for one micropost" do
+	          specify {user.microposts.count == 1 }
+	          it { should have_content('micropost') }
+	        end
+	        describe "for two microposts" do 
+	          before { FactoryGirl.create(:micropost, user: user, content: "Dolor sit amet") }
+
+	          specify { user.microposts.count == 2 }
+	          it { should have_content('microposts') }
+	        end
+	    end
+	end
+    	
+	describe "micropost pagination" do 
+      
+		before { visit root_path }
+		before(:all)  { 31.times { FactoryGirl.create(:micropost, user: user) } }
+    	after(:all)   { Micropost.delete_all }
+
+    	it { should have_selector('div.pagination') }
+
+        it "should list each micropost" do 
+        	Micropost.paginate(page: 1).each do |micropost|
+            	page.should have_selector('li', text: micropost.content)
+            end
+        end
 	end
 
 	describe "micropost destruction" do 
 		before { FactoryGirl.create(:micropost, user: user) }
+
+		describe "as incorrect user" do 
+			let(:wrong_user) { FactoryGirl.create(:user)}
+			before do 
+				sign_in wrong_user
+				visit user_path(user) 
+			end
+
+			describe "should not show a delete link" do 
+				it { should_not have_content('delete') }
+			end
+		end
 
 		describe "as correct user" do 
 			before { visit root_path }

@@ -42,7 +42,7 @@ group :test do
   gem 'spork'
   gem 'factory_girl_rails'
   gem 'cucumber-rails', require: false
-  gem 'database_cleaner'
+  gem "database_cleaner", "~> 0.9.1"
 end
 
 group :production do 
